@@ -121,14 +121,64 @@ void loop()
     //Get_Ultrasonic_Distance();
     // loop for posture end
     
-  }
-  
+  }c   
+  //
   if (SerialBT.available()) 
   {
-    SerialBT.write(10);
-    char command = SerialBT.read();
-    CheckSerialCommand(command); 
-  }
+    int temp = Serial.parseInt();
+    
+    if (temp == 0 || temp == 20 || temp == 180)
+    {
+      foo(temp);
+    }
+    if(first == 0)
+    {
+      if(temp == 180)
+      {
+        first = 1;
+        throttle = 180;
+        return;
+      }
+    }
+    else if(second == 0)
+    {
+      if(temp == 0)
+      {
+        second = 1;
+        throttle = 0;
+        return;
+      }
+    }
+    else if(third == 0)
+    {
+      if(temp == 20){
+        third = 1;
+        throttle = 20;
+        return;
+      }
+    }
+    else if(first == 1 && second == 1 && third == 1)
+    {
+      if(temp <= 20)
+      {
+        throttle = 20;
+      }
+      if(temp >= 180)
+      {
+        throttle = 170;
+      }
+      else{
+        throttle = temp;
+      }
+      continue;
+ }
+ 
+void foo(int val)
+{
+  motorA_speed = val;
+}
+  //
+  
 }
 
 void initMPU6050()
@@ -179,15 +229,15 @@ void calcMotorSpeed()
   motorB_speed = throttle - dataForPid[YAW].final_output - dataForPid[ROLL].final_output + dataForPid[PITCH].final_output;
   motorC_speed = throttle + dataForPid[YAW].final_output - dataForPid[ROLL].final_output - dataForPid[PITCH].final_output;
   motorD_speed = throttle - dataForPid[YAW].final_output + dataForPid[ROLL].final_output - dataForPid[PITCH].final_output;
-
-  if (motorA_speed < 0) motorA_speed = 0;
-  if (motorB_speed < 0) motorB_speed = 0;
-  if (motorC_speed < 0) motorC_speed = 0;
-  if (motorD_speed < 0) motorD_speed = 0;
-  if (motorA_speed > 180) motorA_speed = 170;
-  if (motorB_speed > 180) motorB_speed = 170;
-  if (motorC_speed > 180) motorC_speed = 170;
-  if (motorD_speed > 180) motorD_speed = 170;
+  
+  if (motorA_speed <= 25) motorA_speed = 25;
+  if (motorB_speed <= 25) motorB_speed = 25;
+  if (motorC_speed <= 25) motorC_speed = 25;
+  if (motorD_speed <= 25) motorD_speed = 25;
+  if (motorA_speed >= 179) motorA_speed = 170;
+  if (motorB_speed >= 179) motorB_speed = 170;
+  if (motorC_speed >= 179) motorC_speed = 170;
+  if (motorD_speed >= 179) motorD_speed = 170;
 }
 void calcFilteredYPR() //상보필터
 {
