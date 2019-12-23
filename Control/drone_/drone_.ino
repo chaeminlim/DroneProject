@@ -70,6 +70,7 @@ void calcYPRtoDualPID();
 void calcMotorSpeed();   
 void CheckSerialCommand(char command);
 void RunMotor();
+void SendDataToSerial();
 
 void setup()
 {
@@ -98,87 +99,52 @@ void setup()
 
 void loop()
 {
-  if (Drone_Status == NORMAL_MODE)
-  {
-    // loop for posture
-    readAccelGyro(); 
-    calcDT(); // 시간 간격 계산
-    calcAccelYPR(); // 가속도 센서 처리 루틴
-    calcGyroYPR();
-    calcFilteredYPR();
-    calcYPRtoDualPID();
-    calcMotorSpeed();   
+  // loop for posture
+  readAccelGyro(); 
+  calcDT(); // 시간 간격 계산
+  calcAccelYPR(); // 가속도 센서 처리 루틴
+  calcGyroYPR();
+  calcFilteredYPR();
+  calcYPRtoDualPID();
+  calcMotorSpeed();   
+  if (Drone_Status == CALIBRATION_MODE)
+    RunMotor(throttle);
+  else if (Drone_Status == NORMAL_MODE)
     RunMotor();
-    
-    cnt++;
-    if( cnt % 4 == 0)
-    {
-      //SendDataToProcessing();
-      cnt = 0;
-    }
-    // 매번 가속도 센서의 값을 해석해서 rpy에 대한 각도를 구해야 한다.
-    // 초음파센서 거리계산
-    //Get_Ultrasonic_Distance();
-    // loop for posture end
-    
-  }c   
+
+  cnt++;
+  if( cnt % 4 == 0)
+  {
+    SendDataToSerial();
+    cnt = 0;
+  }
+  // 매번 가속도 센서의 값을 해석해서 rpy에 대한 각도를 구해야 한다.
+  // 초음파센서 거리계산
+  //Get_Ultrasonic_Distance();
+  // loop for posture end
+  
   //
   if (SerialBT.available()) 
   {
     int temp = Serial.parseInt();
-    
+    Serial.println("i got your input!");
+
     if (temp == 0 || temp == 20 || temp == 180)
     {
-      foo(temp);
+      Drone_Status = CALIBRATION_MODE;
+      throttle = temp;
     }
-    if(first == 0)
+    else
     {
-      if(temp == 180)
-      {
-        first = 1;
-        throttle = 180;
-        return;
-      }
+      Drone_Status = NORMAL_MODE;
+      throttle = temp;
     }
-    else if(second == 0)
-    {
-      if(temp == 0)
-      {
-        second = 1;
-        throttle = 0;
-        return;
-      }
-    }
-    else if(third == 0)
-    {
-      if(temp == 20){
-        third = 1;
-        throttle = 20;
-        return;
-      }
-    }
-    else if(first == 1 && second == 1 && third == 1)
-    {
-      if(temp <= 20)
-      {
-        throttle = 20;
-      }
-      if(temp >= 180)
-      {
-        throttle = 170;
-      }
-      else{
-        throttle = temp;
-      }
-      continue;
- }
- 
-void foo(int val)
-{
-  motorA_speed = val;
+  }
 }
-  //
-  
+
+void foo(int temp)
+{
+
 }
 
 void initMPU6050()
@@ -283,7 +249,7 @@ void calibAccelGyro()
   readAccelGyro();
  
   //읽어들였으면 이제 읽은 값을 토대로 평균값을 구하면 됨
-  for(int i = 0; i< 10; i++)
+  for(int i = 0; i < 10; i++)
   {
     readAccelGyro();
     for(int j = 0; j < 3; j++)
@@ -294,7 +260,7 @@ void calibAccelGyro()
     delay(100);//0.1초
   }
   //맨 처음 기본 센서 값들을 보여지고 그다음에 평균값을 구하는 함수
-  for(int i = 0; i< 10; i++)
+  for(int i = 0; i< 3; i++)
   {
     baseAc[i] = sumAc[i] / 10;
     baseGy[i] = sumGy[i] / 10;
@@ -421,22 +387,22 @@ void calcGyroYPR()
   */
 }
 
-void SendDataToProcessing()
+void SendDataToSerial()
 {
 
   Serial.print("<");
   Serial.print(filtered_angle[Y], 2);
-  Serial.print(F("r"));
+  Serial.print(F("r:"));
   Serial.print(filtered_angle[X], 2);
-  Serial.print(F("p"));
+  Serial.print(F("p:"));
   Serial.print(filtered_angle[Z], 2);
-  Serial.print(F("y"));
+  Serial.print(F("y:"));
 
   Serial.print(dataForPid[ROLL].final_output, 2);
-  Serial.print(F("R"));
+  Serial.print(F("R:"));
   Serial.print(dataForPid[PITCH].final_output, 2);
-  Serial.print(F("P"));
+  Serial.print(F("P:"));
   Serial.print(dataForPid[YAW].final_output, 2);
-  Serial.print(F("Y"));
+  Serial.print(F("Y:"));
   Serial.print(">");
 }
