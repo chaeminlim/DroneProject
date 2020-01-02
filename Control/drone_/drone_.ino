@@ -49,7 +49,7 @@ float baseGy[3];
 float gyro[3]; // 단위가 적용된 자이로
 
 unsigned long t_now, t_prev; // 시간 측정을 위한 변수
-float throttle = 0.0;
+float throttle = 180.0;
 float motorA_speed, motorB_speed, motorC_speed, motorD_speed;
 float base_target_angle[3];
 
@@ -81,11 +81,6 @@ void setup()
   calibAccelGyro(); // 센서 보정
   initDT(); // 시간 간격 정보 처리
   initYPR();
-
-
-  Serial.begin(115200);
-  SerialBT.begin("ESP32test"); //Bluetooth device name
-  Serial.println("bluetooth connected");
   
   bldc = new Servo[4];
   for(int i = 0; i < 4; i++)
@@ -93,6 +88,13 @@ void setup()
     bldc[i].setPeriodHertz(50);
     bldc[i].attach(PIN_NUM[i]);   
   }
+  SerialBT.begin("ESP32test"); //Bluetooth device name
+
+  while(!SerialBT.available());
+  
+  serialFlush();
+  
+  SerialBT.println("bluetooth connected");
 }
 
 
@@ -113,7 +115,7 @@ void loop()
     RunMotor();
 
   cnt++;
-  if( cnt % 4 == 0)
+  if( cnt % 100 == 0)
   {
     SendDataToSerial();
     cnt = 0;
@@ -126,27 +128,30 @@ void loop()
   //
   if (SerialBT.available()) 
   {
-    int temp = Serial.parseInt();
-    Serial.println("i got your input!");
-
+    int temp = SerialBT.parseInt();
+    SerialBT.println(temp);
+    serialFlush();
+    
     if (temp == 0 || temp == 20 || temp == 180)
     {
+      SerialBT.println("CALIB");
       Drone_Status = CALIBRATION_MODE;
       throttle = temp;
     }
     else
     {
+      SerialBT.println("NORMAL");
       Drone_Status = NORMAL_MODE;
       throttle = temp;
     }
   }
 }
-
-void foo(int temp)
+void serialFlush()
 {
-
-}
-
+  while(SerialBT.available() > 0) {
+    char t = SerialBT.read();
+  }
+}   
 void initMPU6050()
 {
   Wire.begin();
@@ -390,10 +395,14 @@ void calcGyroYPR()
 void SendDataToSerial()
 {
 
+  int g = Gy[Z];
   Serial.print("<");
-  Serial.print(filtered_angle[Y], 2);
-  Serial.print(F("r:"));
+  Serial.print(g);
+  Serial.print(">");
+  Serial.print("<");
   Serial.print(filtered_angle[X], 2);
+  Serial.print(F("r:"));
+  Serial.print(filtered_angle[Y], 2);
   Serial.print(F("p:"));
   Serial.print(filtered_angle[Z], 2);
   Serial.print(F("y:"));
@@ -404,5 +413,5 @@ void SendDataToSerial()
   Serial.print(F("P:"));
   Serial.print(dataForPid[YAW].final_output, 2);
   Serial.print(F("Y:"));
-  Serial.print(">");
+  Serial.println(">");
 }
